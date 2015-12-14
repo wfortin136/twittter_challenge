@@ -35,3 +35,6 @@ Once I obtain the connection, I spawn two different threads. The first thread co
 Once the timer is up, the main thread kills execution of the first thread. The main thread then halts while the second thread finishes evaluating all tweets in the array. Once the second thread completes, the main thread continues, saves a final version of the word count to a json file and prints out the top 10 words.
 
 For part B, I added the safe run option which saves the state of the word count after each tweet is evaluated. It noticibly slows down run-time, so I made it as an optional configuration. I was torn between a controlled user intitialized stop that could save state within the program, or any execution stop, including unexpected or user initiated. With the latter, the state would not be able to be saved which seemed like the more common occurence, so I designed for this implementation.
+
+## Testing
+I believe this app would need pretty extensive testng. While I did not include test cases, my approach would be to create a set of contrived tweet arrays that encoompass the range of parameters availble in twitter. I would run the through the parsor and compare the output to the actual statistics of the test cases. Multiple language, emoticons, and other non-standard characters would need to be tested.
