@@ -12,7 +12,7 @@ From command line:
 
 > ruby get_data.rb [time_in_min] [existing_filename.json] [safe]
 
-
+Examples below
 > ruby get_data.rb 1
 
 OR
