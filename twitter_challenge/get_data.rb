@@ -32,7 +32,7 @@ tweets_thr = Thread.new{
 
 parse_thr = Thread.new{
   puts "Thread 3"
-  while true
+  while (tweets_thr.status || tweets.length>0)
     if tweets.length>0
       t = tweets.shift
       #puts "#{t.text}"
@@ -49,11 +49,8 @@ parse_thr = Thread.new{
 }
 sleep(5)
 Thread.kill(tweets_thr)
-Thread.kill(parse_thr)
+parse_thr.join
 
-#puts " Thread 1"
-#puts tweets.length
-#puts "#{tweets[5].user.name} :  #{tweets[5].text}"
 count =0
 word_count.sort_by{|word, count| count}.reverse.each do |w,c|
   count += 1
@@ -63,7 +60,3 @@ word_count.sort_by{|word, count| count}.reverse.each do |w,c|
   end
 end
 
-#puts word_count
-
-
-#argument = String.new ARGV[0]
