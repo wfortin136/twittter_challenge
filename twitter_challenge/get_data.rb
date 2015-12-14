@@ -2,6 +2,42 @@ require 'rubygems'
 require 'tweetstream'
 
 #########################################################
+# get the itme value from command line
+def get_time(args)
+  # get time window for collecting tweets, in minutes
+  if args[0]
+    return time = args[0].to_i
+  else
+    puts "Missing time windw for data collection"
+  end
+   
+end
+
+# get existing file from command line as input by user
+def get_existing_file(args)
+  # get word count json file to continue counting if input by user
+  if args[1]
+    file = File.open(args[1], "r+").read # read/write from json file
+    return JSON.parse(file)        # parse json to ruby object
+  else
+    return Hash.new                # no file, create new hash
+  end
+end
+
+# safe_run directs the program to make intermediate saves of the word_count during execution
+# as a backup in case of unexpected process ending or closure. Dramtically reduces speed
+def safe_run(args)
+  $safe_flag =false
+  if args[2] # if the value is given by user
+    if args[2] == "safe"  # value must be the word 'safe'
+      return true
+    else
+      puts "Did not recognize #{args[2]} command. Only accpetable command is 'safe' or leave empty"
+      return false
+    end
+  end
+end
+
 # save ruby object as json
 def save_json(object, name)
   object_json = object.to_json
@@ -9,6 +45,7 @@ def save_json(object, name)
     f.write(object_json)
   end
 end
+
 
 # parse and count tweets
 def tweet_eval
@@ -73,31 +110,9 @@ end
 
 ## Get command line arguments
 
-# get time window for collecting tweets, in minutes
-if ARGV[0]
-  time = ARGV[0].to_i
-else
-  puts "Missing time windw for data collection"
-end
-
-# get word count json file to add to if file is input by user
-if ARGV[1]
-  file = File.open(ARGV[1], "r+").read # read/write from json file
-  $word_count = JSON.parse(file)        # parse json to ruby object
-else
-  $word_count = Hash.new                # no file, create new hash
-end
-
-# safe_flag directs the program to make intermediate saves of the word_count during execution
-# as a backup in case of unexpected process ending or closure.
-safe_flag =false
-if ARGV[2] # if the value is given by user
-  if ARGV[2] == "safe"  # value must be the word 'safe'
-    $safe_flag = true
-  else
-    puts "Did not recognize #{ARGV[2]} command. Only accpetable command is 'safe' or leave empty"
-  end
-end
+time = get_time(ARGV)
+$word_count = get_existing_file(ARGV)
+$safe_flag = safe_run(ARGV)
 
 # get list of stop arrays
 # save as set for better performance during parse and compare 
