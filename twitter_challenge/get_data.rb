@@ -11,8 +11,25 @@ end
 
 puts "Test"
 
-TweetStream::Client.new.track('the') do |status|
-  # The status object is a special Hash with
-  # method access to its keys.
-  puts "#{status.text}"
+client = TweetStream::Client.new
+tweets = []
+
+client.on_error do |error|
+  puts "#{error.text}"
 end
+
+thread_test = Thread.new{
+
+  puts " Thread 2"
+  client.sample do |status|
+    # The status object is a special Hash with
+    # method access to its keys.
+    #puts "#{status.text}"
+    tweets.push(status)
+    puts tweets.length
+  end
+}
+sleep(2)
+Thread.kill(thread_test)
+puts " Thread 1"
+puts tweets.length
