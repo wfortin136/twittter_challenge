@@ -18,6 +18,15 @@ else
   word_count = Hash.new
 end
 
+safe_flag =false
+if ARGV[2]
+  if ARGV[2] == "safe"
+    safe_flag = true
+  else
+    puts "Did not recognize #{ARGV[2]} command. Only accpetable command is 'safe' or leave empty"
+  end
+end
+
 stop_words = File.open("stop-word-list.txt", "r").read
 
 TweetStream.configure do |config|
@@ -60,8 +69,12 @@ parse_thr = Thread.new{
           end
         end
       end
-      save_json(word_count, "word_count_backup")
-      system 'mv word_count_backup.json word_count.json'
+      if safe_flag
+        save_json(word_count, "word_count_backup")
+        system 'mv word_count_backup.json word_count.json'
+      else
+        save_json(word_count, "word_count")
+      end
     end
   end
 }
@@ -75,7 +88,7 @@ for i in 1..time
     print "."
     #puts x*delim
   end
-  puts "#{i} Minute(s)"
+  puts " #{i} Minute(s)"
 end
 
 Thread.kill(tweets_thr)
