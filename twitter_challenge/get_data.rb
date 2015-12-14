@@ -72,8 +72,6 @@ parse_thr = Thread.new{
       if safe_flag
         save_json(word_count, "word_count_backup")
         system 'mv word_count_backup.json word_count.json'
-      else
-        save_json(word_count, "word_count")
       end
     end
   end
@@ -94,6 +92,7 @@ end
 Thread.kill(tweets_thr)
 parse_thr.join
 
+save_json(word_count, "word_count")
 count =0
 word_count.sort_by{|word, count| count}.reverse.each do |w,c|
   count += 1
