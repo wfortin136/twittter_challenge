@@ -12,11 +12,14 @@ From command line:
 
 > ruby get_data.rb [time_in_min] [existing_filename.json] [safe]
 
-> ruby get_data.rb 1\s\s
+
+> ruby get_data.rb 1
+
 OR
-> ruby get_data.rb 1 word_count.json\s\s
+> ruby get_data.rb 1 word_count.json
+
 OR
-> ruby get_data.rb 1 word_count.json safe\s\s
+> ruby get_data.rb 1 word_count.json safe
 
 ## Command Line Arguments
 get_data.rb can take three arguments
