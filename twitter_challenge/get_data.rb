@@ -2,6 +2,7 @@ require 'rubygems'
 require 'tweetstream'
 
 #########################################################
+##################Ruby Methods###########################
 # get the itme value from command line
 def get_time(args)
   # get time window for collecting tweets, in minutes
