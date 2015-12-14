@@ -9,27 +9,61 @@ TweetStream.configure do |config|
     config.auth_method        = :oauth
 end
 
-puts "Test"
-
 client = TweetStream::Client.new
 tweets = []
+errors = []
+word_count = Hash.new
 
 client.on_error do |error|
   puts "#{error.text}"
+  errors.push(error)
 end
 
-thread_test = Thread.new{
+tweets_thr = Thread.new{
 
   puts " Thread 2"
-  client.sample do |status|
+  client.sample do |tweet|
     # The status object is a special Hash with
     # method access to its keys.
     #puts "#{status.text}"
-    tweets.push(status)
-    puts tweets.length
+    tweets.push(tweet)
   end
 }
-sleep(2)
-Thread.kill(thread_test)
-puts " Thread 1"
-puts tweets.length
+
+parse_thr = Thread.new{
+  puts "Thread 3"
+  while true
+    if tweets.length>0
+      t = tweets.shift
+      #puts "#{t.text}"
+      words = t.text.split
+      words.each do |w|
+        if word_count.key?(w)
+          word_count[w] = word_count[w] + 1
+        else
+          word_count[w]= 1
+        end
+      end
+    end
+  end
+}
+sleep(5)
+Thread.kill(tweets_thr)
+Thread.kill(parse_thr)
+
+#puts " Thread 1"
+#puts tweets.length
+#puts "#{tweets[5].user.name} :  #{tweets[5].text}"
+count =0
+word_count.sort_by{|word, count| count}.reverse.each do |w,c|
+  count += 1
+  puts "#{count}) #{c}: #{w} "
+  if count==10
+    break
+  end
+end
+
+#puts word_count
+
+
+#argument = String.new ARGV[0]
