@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'tweetstream'
 
+#########################################################
 # save ruby object as json
 def save_json(object, name)
   object_json = object.to_json
@@ -9,26 +10,101 @@ def save_json(object, name)
   end
 end
 
-time = ARGV[0].to_i
-if ARGV[1]
-  existing_file_count = ARGV[1]
-  file = File.open(ARGV[1], "r+").read
-  word_count = JSON.parse(file)    # parse json to ruby object
-else
-  word_count = Hash.new
+# parse and count tweets
+def tweet_eval
+  # We want to keep looping through tweets array as long tweets_thr is still
+  # collecting or we still have tweets to evaluate
+  while ($tweets_thr.status || $tweets.length>0)
+    if $tweets.length>0
+      t = $tweets.shift                          # get and remove first element of array
+      words = t.text.split                      # get text of tweets and break into array of words    
+      words.each do |w|
+        if !($stop_words.include?(w.downcase))    # determine if word is included in stop list set
+          if $word_count.key?(w)                 # if word is already in word count
+            $word_count[w] = $word_count[w] + 1   # increment count
+          else
+            $word_count[w]= 1                    # if new word, add to hash with value of 1
+          end
+        end
+      end
+      if $safe_flag                                        # if safe is designated by user
+        # need to save to an intermediate file (word_count_backup.json) then rename
+        # to new file word_count.json. This ensures we don't lose data if we end execution
+        # during the write portion of save_js. The worst we lose is the count updates of the
+        # latest tweet, but not previous word_count tweets
+        save_json($word_count, "word_count_backup")         # save to intermediate file
+        system 'mv word_count_backup.json word_count.json' # rename to final file
+      end
+    end
+  end
+
 end
 
+# timer for tweet runtime
+# input time is assumed to be in minutes
+def run_timer(time)
+  puts "Start"
+  for i in 1..time
+    delim = 5
+    count = (60/delim).to_i
+    for x in 1..count
+      sleep(delim)
+      print "."
+      #puts x*delim
+    end
+    puts " #{i} Minute(s)"
+  end
+end
+
+# Print top number of values by count in descending order.
+# lim is an integer that will take the top lim values
+def print_top(lim)
+  count=0
+  # sort hash by count value and reverse order for descending
+  $word_count.sort_by{|word, count| count}.reverse.each do |w,c|
+    count += 1
+    puts "#{count}) #{c}: #{w} "
+    if count==lim #top number of values
+      break
+    end
+  end
+end
+#############################################################
+
+## Get command line arguments
+
+# get time window for collecting tweets, in minutes
+if ARGV[0]
+  time = ARGV[0].to_i
+else
+  puts "Missing time windw for data collection"
+end
+
+# get word count json file to add to if file is input by user
+if ARGV[1]
+  file = File.open(ARGV[1], "r+").read # read/write from json file
+  $word_count = JSON.parse(file)        # parse json to ruby object
+else
+  $word_count = Hash.new                # no file, create new hash
+end
+
+# safe_flag directs the program to make intermediate saves of the word_count during execution
+# as a backup in case of unexpected process ending or closure.
 safe_flag =false
-if ARGV[2]
-  if ARGV[2] == "safe"
-    safe_flag = true
+if ARGV[2] # if the value is given by user
+  if ARGV[2] == "safe"  # value must be the word 'safe'
+    $safe_flag = true
   else
     puts "Did not recognize #{ARGV[2]} command. Only accpetable command is 'safe' or leave empty"
   end
 end
 
-stop_words = File.open("stop-word-list.txt", "r").read
+# get list of stop arrays
+# save as set for better performance during parse and compare 
+$stop_words = Set.new(File.open("stop-word-list.txt", "r").read.split)
 
+# Use tweetstream gem to make OAuth connection to twitter api
+# Values are unique for each user account and app
 TweetStream.configure do |config|
     config.consumer_key       = 'PEF5yBs0mt99PrzgwTPr61Ahe'
     config.consumer_secret    = 'NGFIHSCf4Psdc6jKuoWEixcITcTAbAgdekdgJOdLqHCJEbtZYG'
@@ -37,68 +113,45 @@ TweetStream.configure do |config|
     config.auth_method        = :oauth
 end
 
+# new client
 client = TweetStream::Client.new
 errors = []
-tweets = []
+$tweets = [] #tweets will be treated as a FIFO queue using push and shift
 
+# show and record any errors during connection
 client.on_error do |error|
   puts "#{error.text}"
   errors.push(error)
 end
 
-tweets_thr = Thread.new{
-
+# spawn new thread that collects tweets and stores them as twitter objects in array
+$tweets_thr = Thread.new{
   #puts " Thread 2"
+  
+  # get some randomized sample of tweets from twitter (statuses/sample)
   client.sample do |tweet|
-    tweets.push(tweet)
+    $tweets.push(tweet) # push each tweet to end of array
   end
 }
 
+# spawn new thread that evaluates tweets and makes word count
 parse_thr = Thread.new{
   #puts "Thread 3"
-  while (tweets_thr.status || tweets.length>0)
-    if tweets.length>0
-      t = tweets.shift
-      words = t.text.split
-      words.each do |w|
-        if !(stop_words.include? w.downcase)
-          if word_count.key?(w)
-            word_count[w] = word_count[w] + 1
-          else
-            word_count[w]= 1
-          end
-        end
-      end
-      if safe_flag
-        save_json(word_count, "word_count_backup")
-        system 'mv word_count_backup.json word_count.json'
-      end
-    end
-  end
+  tweet_eval
 }
 
-puts "Start"
-for i in 1..time
-  delim = 5
-  count = (60/delim).to_i
-  for x in 1..count
-    sleep(delim)
-    print "."
-    #puts x*delim
-  end
-  puts " #{i} Minute(s)"
-end
+#execute run timer from time given at command line. Time is assumed to be in minutes
+run_timer(time)
 
-Thread.kill(tweets_thr)
+# timer is up, kill sollection thread
+Thread.kill($tweets_thr)
+
+# hold current thread till parse thread finishes word_count of tweets. Once parse_thr
+# completes execution, current thread will resume
 parse_thr.join
 
-save_json(word_count, "word_count")
-count =0
-word_count.sort_by{|word, count| count}.reverse.each do |w,c|
-  count += 1
-  puts "#{count}) #{c}: #{w} "
-  if count==10
-    break
-  end
-end
+#save word_count
+save_json($word_count, "word_count")
 
+# output top 10
+print_top(10)
